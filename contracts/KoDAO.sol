@@ -16,7 +16,7 @@ contract KoDAO is ERC1155Supply, Ownable {
     uint256 private constant tokenID = 0;
     uint256 public constant maxSupply = 2600;
     uint256 public constant maxPurchase = 5;
-    uint256 public constant buyPrice = 0.01 ether;
+    uint256 public constant mintPrice = 0.1 ether;
     uint256 public reserveMaxAmount = 100;
 
 
@@ -25,14 +25,14 @@ contract KoDAO is ERC1155Supply, Ownable {
         symbol = "KODAO";
     }
 
-    modifier onlyEOA() {
-        require(msg.sender == tx.origin, "Must use EOA");
-        _;
+    function totalSupply() public view returns (uint256) {
+        return totalSupply(tokenID);
     }
 
-    function mint(address account, uint256 amount) public {
+    function mint(address account, uint256 amount) public payable {
         require(amount < maxPurchase, "Max purchase exceeded");
         require(totalSupply(tokenID) + amount < maxSupply, "Purchase would exceed max supply");
+        require(mintPrice * amount == msg.value, "Incorrect ETH value sent");
 
         _mint(account, tokenID, amount, "");
     }
