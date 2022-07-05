@@ -20,5 +20,11 @@ module.exports = {
       "error",
       { ignores: ["modules"] },
     ],
+    "node/no-unpublished-import": [
+      "error",
+      {
+        allowModules: ["hardhat-deploy", "hardhat"],
+      },
+    ],
   },
 };
