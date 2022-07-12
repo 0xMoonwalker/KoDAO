@@ -27,4 +27,10 @@ module.exports = {
       },
     ],
   },
+  settings: {
+    node: {
+      resolvePaths: ["node_modules/@types"],
+      tryExtensions: [".js", ".json", ".node", ".ts", ".d.ts"],
+    },
+  },
 };
