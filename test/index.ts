@@ -103,4 +103,18 @@ describe("KoDAО", function () {
       expect(tokenUri).to.be.equal("http://gm.fren");
     });
   });
+
+  describe("#claim", function () {
+    it("should fail to mint tokens when the public sale is not active", async function () {
+      await expect(koDAO.claim()).to.be.revertedWith("Sale not active");
+    });
+
+    it("Should be able to claim if the account is in the presaled list", async function () {
+      await koDAO.setSaleActive(true);
+
+      await koDAO["setPresaled(address,uint256)"](alice.address, 2);
+      await koDAO.connect(alice).claim();
+      expect(await koDAO.balanceOf(alice.address, tokenId)).to.be.equal(2);
+    });
+  });
 });
