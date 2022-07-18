@@ -30,15 +30,16 @@ contract KoDAO is ERC1155Supply, Ownable {
         return totalSupply(tokenID);
     }
 
-    function mint(address account, uint256 amount) public payable {
+    function mint(uint256 amount) public payable {
         // require(amount < maxPurchase, "Max purchase exceeded");
         require(totalSupply(tokenID) + amount < maxSupply, "Purchase would exceed max supply");
         require(mintPrice * amount == msg.value, "Incorrect ETH value sent");
 
-        _mint(account, tokenID, amount, "");
+        _mint(msg.sender, tokenID, amount, "");
     }
 
-    function claim(address account) public {
+    function claim() public {
+        address account = msg.sender;
         uint256 amount = presaled[account];
         require(amount > 0, "Address not eligible for claim");
 
@@ -63,5 +64,10 @@ contract KoDAO is ERC1155Supply, Ownable {
 
     function setPresaled(address account, uint256 amount) external onlyOwner {
         presaled[account] = amount;
+    }
+
+    function setURI(string memory newURI) external onlyOwner {
+        _setURI(newURI);
+        emit URI(newURI, tokenID);
     }
 }
