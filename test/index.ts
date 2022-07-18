@@ -29,6 +29,58 @@ describe("KoDAО", function () {
     koDAO = await ethers.getContractAt("KoDAO", koDAOdep.address);
   });
 
+  describe("#mint()", function () {
+    it("should fail to mint tokens when the public sale is not active", async function () {
+      await expect(koDAO.mint(1, { value: mintPrice })).to.be.revertedWith(
+        "Sale not active"
+      );
+    });
+
+    it("should fail to mint tokens when incorrect ETH amount is provided", async function () {
+      await koDAO.setSaleActive(true);
+      await expect(
+        koDAO.mint(1, { value: mintPrice.mul(2) })
+      ).to.be.revertedWith("Incorrect ETH value sent");
+
+      await expect(
+        koDAO.mint(1, { value: mintPrice.add(1) })
+      ).to.be.revertedWith("Incorrect ETH value sent");
+
+      await expect(
+        koDAO.mint(1, { value: mintPrice.sub(1) })
+      ).to.be.revertedWith("Incorrect ETH value sent");
+    });
+
+    it("should be able to mint when sale is open", async function () {
+      await koDAO.setSaleActive(true);
+
+      await koDAO.connect(alice).mint(1, { value: mintPrice });
+
+      const balance = await koDAO.balanceOf(alice.address, tokenId);
+      expect(balance).to.equal(1);
+    });
+
+    it("should not allow to mint more than maxSupply", async function () {
+      await koDAO.setSaleActive(true);
+
+      let maxSupply = (await koDAO.maxSupply()).toNumber();
+
+      await expect(
+        koDAO.connect(alice).mint(maxSupply, { value: mintPrice })
+      ).to.be.revertedWith("Purchase would exceed max supply");
+
+      maxSupply = maxSupply - 1;
+
+      await koDAO
+        .connect(alice)
+        .mint(maxSupply, { value: mintPrice.mul(maxSupply) });
+
+      await expect(
+        koDAO.connect(alice).mint(1, { value: mintPrice })
+      ).to.be.revertedWith("Purchase would exceed max supply");
+    });
+  });
+
   describe("#setURI", function () {
     it("should emit correct Event", async function () {
       const uri = "http://gm.fren";
@@ -38,6 +90,8 @@ describe("KoDAО", function () {
     });
 
     it("should be able to set baseUri", async function () {
+      await koDAO.setSaleActive(true);
+
       await koDAO.connect(alice).mint(1, { value: mintPrice });
       await koDAO.connect(bob).mint(1, { value: mintPrice });
 
