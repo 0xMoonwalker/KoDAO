@@ -14,11 +14,12 @@ contract KoDAO is ERC1155Supply, Ownable {
     string public name;
     string public symbol;
     uint256 private constant tokenID = 0;
-    uint256 public constant maxSupply = 2600;
+    uint256 public constant maxSupply = 2600 + 1;
     // uint256 public constant maxPurchase = 5;
     uint256 public constant mintPrice = 0.1 ether;
     uint256 public reserveMaxAmount = 260;
     address public beneficiary;
+    bool private saleActive = false;
     mapping(address => uint256) public presaled;
 
     constructor(string memory _uri) ERC1155(_uri) ERC1155Supply() {
@@ -26,11 +27,20 @@ contract KoDAO is ERC1155Supply, Ownable {
         symbol = "KODAO";
     }
 
+    modifier saleIsActive() {
+        require(saleActive, "Sale not active"); 
+        _;
+    }
+
     function totalSupply() public view returns (uint256) {
         return totalSupply(tokenID);
     }
 
-    function mint(uint256 amount) public payable {
+    function setSaleActive(bool state) external onlyOwner {
+        saleActive = state;
+    }
+
+    function mint(uint256 amount) public payable saleIsActive {
         // require(amount < maxPurchase, "Max purchase exceeded");
         require(totalSupply(tokenID) + amount < maxSupply, "Purchase would exceed max supply");
         require(mintPrice * amount == msg.value, "Incorrect ETH value sent");
@@ -38,7 +48,7 @@ contract KoDAO is ERC1155Supply, Ownable {
         _mint(msg.sender, tokenID, amount, "");
     }
 
-    function claim() public {
+    function claim() public saleIsActive {
         address account = msg.sender;
         uint256 amount = presaled[account];
         require(amount > 0, "Address not eligible for claim");
@@ -48,7 +58,8 @@ contract KoDAO is ERC1155Supply, Ownable {
 
     function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
-        (bool sent, bytes memory data) = payable(beneficiary).call{ value: balance }("");
+        (bool sent, bytes memory _data) = payable(beneficiary).call{ value: balance }("");
+        // _data;
         require(sent, "Failed to send Ether");
     }
 
