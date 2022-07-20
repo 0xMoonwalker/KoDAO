@@ -3,6 +3,7 @@ import hre from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { KoDAO } from "../typechain";
 import { parseEther } from "ethers/lib/utils";
+import { it } from "mocha";
 
 const { ethers, deployments } = hre;
 const mintPrice = parseEther("0.1");
@@ -115,6 +116,21 @@ describe("KoDAО", function () {
       await koDAO.setURI("http://gm.fren");
       tokenUri = await koDAO.uri(tokenId);
       expect(tokenUri).to.be.equal("http://gm.fren");
+    });
+  });
+
+  describe("#setPresaled", function () {
+    it("should be able to set presaled list", async function () {
+      await koDAO.setSaleActive(true);
+
+      await koDAO["setPresaled(address[],uint256[])"](
+        [alice.address, bob.address, carol.address],
+        [2, 3, 4]
+      );
+
+      expect(await koDAO.presaled(alice.address)).to.be.equal(2);
+      expect(await koDAO.presaled(bob.address)).to.be.equal(3);
+      expect(await koDAO.presaled(carol.address)).to.be.equal(4);
     });
   });
 });
