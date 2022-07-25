@@ -3,13 +3,13 @@ import hre from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { KoDAO } from "../typechain";
 import { parseEther } from "ethers/lib/utils";
-import { it } from "mocha";
 
 const { ethers, deployments } = hre;
 const mintPrice = parseEther("0.1");
 const tokenId = 0;
 
 let deployer: SignerWithAddress,
+  team: SignerWithAddress,
   alice: SignerWithAddress,
   bob: SignerWithAddress,
   carol: SignerWithAddress;
@@ -21,7 +21,10 @@ describe("KoDAО", function () {
     [alice, bob, carol] = await Promise.all(
       (await hre.getUnnamedAccounts()).map((a) => ethers.getSigner(a))
     );
-    deployer = await ethers.getSigner((await hre.getNamedAccounts()).deployer);
+
+    const namedAccounts = await hre.getNamedAccounts();
+    deployer = await ethers.getSigner(namedAccounts.deployer);
+    team = await ethers.getSigner(namedAccounts.team);
   });
 
   beforeEach(async function () {
@@ -131,6 +134,21 @@ describe("KoDAО", function () {
       expect(await koDAO.presaled(alice.address)).to.be.equal(2);
       expect(await koDAO.presaled(bob.address)).to.be.equal(3);
       expect(await koDAO.presaled(carol.address)).to.be.equal(4);
+    });
+  });
+
+  describe("#withdraw", function () {
+    it("should be able to withdraw ETH", async function () {
+      await koDAO.setSaleActive(true);
+
+      await koDAO.connect(alice).mint(1, { value: mintPrice });
+      await koDAO.connect(bob).mint(2, { value: mintPrice.mul(2) });
+      await koDAO.connect(carol).mint(3, { value: mintPrice.mul(3) });
+
+      await expect(await koDAO.withdraw()).to.changeEtherBalances(
+        [team, koDAO],
+        [parseEther("0.6"), parseEther("-0.6")]
+      );
     });
   });
 });

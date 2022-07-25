@@ -1,4 +1,6 @@
 import * as dotenv from "dotenv";
+import { parse } from "csv-parse";
+import fs from "fs";
 
 import { HardhatUserConfig, task } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
@@ -19,6 +21,57 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
     console.log(account.address);
   }
 });
+
+task("setPresaled", "Set presaled list")
+  .addParam("presaledList", "File with presaled addresses and NFT amounts")
+  .setAction(async ({ presaledList }, hre) => {
+    const { ethers, deployments } = hre;
+
+    const ensProvider = new ethers.providers.AlchemyProvider(
+      "homestead",
+      process.env.ALCHEMY_API_KEY
+    );
+
+    const parser = fs.createReadStream(presaledList).pipe(
+      parse({
+        columns: true,
+      })
+    );
+
+    const addresses: string[] = [];
+    const amounts: string[] = [];
+
+    for await (const record of parser) {
+      let address: string = record.address.trim();
+      if (address.includes(".eth")) {
+        const resolvedAddress = await ensProvider.resolveName(address);
+        if (!resolvedAddress) {
+          console.log("Can not resolve addr: ", record, resolvedAddress);
+          continue;
+        }
+        address = resolvedAddress;
+      }
+
+      if (ethers.utils.isAddress(address)) {
+        addresses.push(address);
+        amounts.push(record.nftAmount);
+      } else {
+        console.log("Not valid address: ", record);
+      }
+    }
+
+    const koDAOdep = await deployments.get("KoDAO");
+    const koDAO = await ethers.getContractAt("KoDAO", koDAOdep.address);
+
+    const resp = await koDAO["setPresaled(address[],uint256[])"](
+      addresses,
+      amounts
+    );
+
+    console.log("gas limit: ", resp.gasLimit);
+    const receipt = await resp.wait();
+    console.log("gas used: ", receipt.gasUsed);
+  });
 
 const accounts = {
   mnemonic: process.env.MNEMONIC || "",

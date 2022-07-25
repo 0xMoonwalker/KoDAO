@@ -9,15 +9,16 @@ const func: DeployFunction = async function ({
   deployments,
 }: HardhatRuntimeEnvironment) {
   const { deploy, log } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, team } = await getNamedAccounts();
 
   log(`Deploying KoDAO(
-    uri=${URI}
+    uri=${URI},
+    beneficiary=${team}
   )`);
 
   await deploy("KoDAO", {
     from: deployer,
-    args: [URI],
+    args: [URI, team],
     log: true,
   });
 };

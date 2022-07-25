@@ -22,9 +22,10 @@ contract KoDAO is ERC1155Supply, Ownable {
     bool private saleActive = false;
     mapping(address => uint256) public presaled;
 
-    constructor(string memory _uri) ERC1155(_uri) ERC1155Supply() {
+    constructor(string memory _uri, address _beneficiary) ERC1155(_uri) ERC1155Supply() {
         name = "KoDAO";
         symbol = "KODAO";
+        beneficiary = _beneficiary;
     }
 
     modifier saleIsActive() {
@@ -59,7 +60,6 @@ contract KoDAO is ERC1155Supply, Ownable {
     function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
         (bool sent, bytes memory _data) = payable(beneficiary).call{ value: balance }("");
-        // _data;
         require(sent, "Failed to send Ether");
     }
 
