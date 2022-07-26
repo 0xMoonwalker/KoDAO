@@ -90,12 +90,21 @@ describe("KoDAО", function () {
       await expect(koDAO.claim()).to.be.revertedWith("Sale not active");
     });
 
-    it("Should be able to claim if the account is in the presaled list", async function () {
+    it("should be able to claim if the account is in the presaled list", async function () {
       await koDAO.setSaleActive(true);
 
       await koDAO["setPresaled(address,uint256)"](alice.address, 2);
       await koDAO.connect(alice).claim();
       expect(await koDAO.balanceOf(alice.address, tokenId)).to.be.equal(2);
+    });
+
+    it("should not be able to claim if the account is not in the presaled list", async function () {
+      await koDAO.setSaleActive(true);
+
+      await expect(koDAO.connect(alice).claim()).to.be.revertedWith(
+        "Address not eligible for claim"
+      );
+      expect(await koDAO.balanceOf(alice.address, tokenId)).to.be.equal(0);
     });
   });
 
@@ -160,6 +169,23 @@ describe("KoDAО", function () {
         [team, koDAO],
         [parseEther("0.6"), parseEther("-0.6")]
       );
+    });
+  });
+
+  describe("#totalSupply()", function () {
+    it("should return the supply for tokenID=0", async function () {
+      expect(await koDAO["totalSupply()"]()).to.equals(0);
+
+      await koDAO.setSaleActive(true);
+
+      await koDAO.connect(alice).mint(1, { value: mintPrice });
+      await koDAO.connect(bob).mint(2, { value: mintPrice.mul(2) });
+
+      expect(await koDAO["totalSupply()"]()).to.equals(3);
+
+      await koDAO.connect(carol).mint(3, { value: mintPrice.mul(3) });
+
+      expect(await koDAO["totalSupply()"]()).to.equals(6);
     });
   });
 });
