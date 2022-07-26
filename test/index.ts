@@ -135,6 +135,17 @@ describe("KoDAО", function () {
       expect(await koDAO.presaled(bob.address)).to.be.equal(3);
       expect(await koDAO.presaled(carol.address)).to.be.equal(4);
     });
+
+    it("should fail when incorrect data is provided", async function () {
+      await koDAO.setSaleActive(true);
+
+      await expect(
+        koDAO["setPresaled(address[],uint256[])"](
+          [alice.address, bob.address, carol.address],
+          [2, 3, 4, 5]
+        )
+      ).to.be.revertedWith("Incorrect data");
+    });
   });
 
   describe("#withdraw", function () {
