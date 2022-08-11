@@ -3,13 +3,13 @@ import hre from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { KoDAO } from "../typechain";
 import { parseEther } from "ethers/lib/utils";
+import { BigNumber } from "ethers";
 
 const { ethers, deployments } = hre;
-const mintPrice = parseEther("0.1");
+const mintPrice = parseEther("0.12");
 const tokenId = 0;
 
-let deployer: SignerWithAddress,
-  team: SignerWithAddress,
+let team: SignerWithAddress,
   alice: SignerWithAddress,
   bob: SignerWithAddress,
   carol: SignerWithAddress;
@@ -23,7 +23,6 @@ describe("KoDAО", function () {
     );
 
     const namedAccounts = await hre.getNamedAccounts();
-    deployer = await ethers.getSigner(namedAccounts.deployer);
     team = await ethers.getSigner(namedAccounts.team);
   });
 
@@ -64,24 +63,24 @@ describe("KoDAО", function () {
       expect(balance).to.equal(1);
     });
 
-    it("should not allow to mint more than maxSupply", async function () {
+    it("should not be able to mint more than maxSellAmount", async function () {
       await koDAO.setSaleActive(true);
 
-      let maxSupply = (await koDAO.maxSupply()).toNumber();
+      const maxSellAmount = (await koDAO.maxSellAmount()).toNumber() - 1;
 
       await expect(
-        koDAO.connect(alice).mint(maxSupply, { value: mintPrice })
-      ).to.be.revertedWith("Purchase would exceed max supply");
-
-      maxSupply = maxSupply - 1;
+        koDAO.connect(alice).mint(maxSellAmount + 1, { value: mintPrice })
+      ).to.be.revertedWith("Mint would exceed max supply");
 
       await koDAO
         .connect(alice)
-        .mint(maxSupply, { value: mintPrice.mul(maxSupply) });
+        .mint(maxSellAmount, { value: mintPrice.mul(maxSellAmount) });
 
       await expect(
         koDAO.connect(alice).mint(1, { value: mintPrice })
-      ).to.be.revertedWith("Purchase would exceed max supply");
+      ).to.be.revertedWith("Mint would exceed max supply");
+
+      expect(await koDAO["totalSupply()"]()).to.be.equal(maxSellAmount);
     });
   });
 
@@ -105,6 +104,72 @@ describe("KoDAО", function () {
         "Address not eligible for claim"
       );
       expect(await koDAO.balanceOf(alice.address, tokenId)).to.be.equal(0);
+    });
+
+    it("should not be able to claim more than maxClaimAmount", async function () {
+      await koDAO.setSaleActive(true);
+
+      const maxClaimAmount = (await koDAO.maxClaimAmount()).toNumber() - 1;
+      await koDAO["setPresaled(address,uint256)"](
+        alice.address,
+        maxClaimAmount - 1
+      );
+      await koDAO["setPresaled(address,uint256)"](bob.address, 2);
+      await koDAO["setPresaled(address,uint256)"](carol.address, 1);
+
+      await koDAO.connect(alice).claim();
+      expect(await koDAO.totalClaimed()).to.be.equal(maxClaimAmount - 1);
+      await expect(koDAO.connect(bob).claim()).to.be.revertedWith(
+        "Claim would exceed max supply"
+      );
+
+      await koDAO.connect(carol).claim();
+      expect(await koDAO.totalClaimed()).to.be.equal(maxClaimAmount);
+    });
+
+    it("should be abe to mint and claim up to maxSupply (maxClaimAmount + maxSellAmount)", async function () {
+      await koDAO.setSaleActive(true);
+
+      const maxClaimAmount = (await koDAO.maxClaimAmount()).toNumber() - 1;
+      const aliceClaim = maxClaimAmount - 2;
+      const bobClaim = 2;
+      await koDAO["setPresaled(address,uint256)"](alice.address, aliceClaim);
+      await koDAO["setPresaled(address,uint256)"](bob.address, bobClaim);
+      await koDAO["setPresaled(address,uint256)"](carol.address, 1);
+
+      const maxSellAmount = (await koDAO.maxSellAmount()).toNumber() - 1;
+      const aliceMint = 4;
+      await koDAO
+        .connect(alice)
+        .mint(aliceMint, { value: mintPrice.mul(aliceMint) });
+
+      expect(await koDAO["totalSupply()"]()).to.be.equal(aliceMint);
+
+      await koDAO.connect(bob).claim();
+
+      expect(await koDAO["totalSupply()"]()).to.be.equal(aliceMint + bobClaim);
+
+      const bobMint = maxSellAmount - aliceMint;
+      await koDAO.connect(bob).mint(bobMint, {
+        value: mintPrice.mul(bobMint),
+      });
+
+      await expect(
+        koDAO.connect(alice).mint(1, { value: mintPrice })
+      ).to.be.revertedWith("Mint would exceed max supply");
+
+      expect(await koDAO["totalSupply()"]()).to.be.equal(
+        maxSellAmount + bobClaim
+      );
+
+      await koDAO.connect(alice).claim();
+      expect(await koDAO["totalSupply()"]()).to.be.equal(
+        maxSellAmount + maxClaimAmount
+      );
+
+      await expect(koDAO.connect(carol).claim()).to.be.revertedWith(
+        "Claim would exceed max supply"
+      );
     });
   });
 
@@ -165,9 +230,11 @@ describe("KoDAО", function () {
       await koDAO.connect(bob).mint(2, { value: mintPrice.mul(2) });
       await koDAO.connect(carol).mint(3, { value: mintPrice.mul(3) });
 
+      const amount = mintPrice.mul(6);
+
       await expect(await koDAO.withdraw()).to.changeEtherBalances(
         [team, koDAO],
-        [parseEther("0.6"), parseEther("-0.6")]
+        [amount, BigNumber.from(0).sub(amount)]
       );
     });
   });

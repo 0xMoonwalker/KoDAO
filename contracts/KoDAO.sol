@@ -14,13 +14,14 @@ contract KoDAO is ERC1155Supply, Ownable {
     string public name;
     string public symbol;
     uint256 private constant tokenID = 0;
-    uint256 public constant maxSupply = 2600 + 1;
-    // uint256 public constant maxPurchase = 5;
-    uint256 public constant mintPrice = 0.1 ether;
-    uint256 public reserveMaxAmount = 260;
+    uint256 public constant maxSellAmount = 1350 + 1;
+    uint256 public constant maxClaimAmount = 1250 + 1;
+    uint256 public constant mintPrice = 0.12 ether;
+    uint256 public totalClaimed = 0;
+    mapping(address => uint256) public presaled;
+    mapping(address => uint256) public claimed;
     address public beneficiary;
     bool private saleActive = false;
-    mapping(address => uint256) public presaled;
 
     constructor(string memory _uri, address _beneficiary) ERC1155(_uri) ERC1155Supply() {
         name = "KoDAO";
@@ -29,7 +30,7 @@ contract KoDAO is ERC1155Supply, Ownable {
     }
 
     modifier saleIsActive() {
-        require(saleActive, "Sale not active"); 
+        require(saleActive, "Sale not active");
         _;
     }
 
@@ -42,8 +43,10 @@ contract KoDAO is ERC1155Supply, Ownable {
     }
 
     function mint(uint256 amount) public payable saleIsActive {
-        // require(amount < maxPurchase, "Max purchase exceeded");
-        require(totalSupply(tokenID) + amount < maxSupply, "Purchase would exceed max supply");
+        require(
+            totalSupply(tokenID) - totalClaimed + amount < maxSellAmount,
+            "Mint would exceed max supply"
+        );
         require(mintPrice * amount == msg.value, "Incorrect ETH value sent");
 
         _mint(msg.sender, tokenID, amount, "");
@@ -53,8 +56,11 @@ contract KoDAO is ERC1155Supply, Ownable {
         address account = msg.sender;
         uint256 amount = presaled[account];
         require(amount > 0, "Address not eligible for claim");
+        require(totalClaimed + amount < maxClaimAmount, "Claim would exceed max supply");
 
         _mint(account, tokenID, amount, "");
+        totalClaimed += presaled[account];
+        presaled[account] = 0;
     }
 
     function withdraw() external onlyOwner {

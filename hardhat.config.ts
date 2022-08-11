@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 import { parse } from "csv-parse";
 import fs from "fs";
 
-import { HardhatUserConfig, task } from "hardhat/config";
+import { HardhatUserConfig, task, types } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
@@ -73,9 +73,17 @@ task("setPresaled", "Set presaled list")
     console.log("gas used: ", receipt.gasUsed);
   });
 
-const accounts = {
-  mnemonic: process.env.MNEMONIC || "",
-};
+task("setSale", "Set LCA contract sale state")
+  .addParam("active", "Sale state", false, types.boolean)
+  .setAction(async function ({ active }, { ethers, deployments }) {
+    const koDAOdep = await deployments.get("KoDAO");
+    const koDAO = await ethers.getContractAt("KoDAO", koDAOdep.address);
+
+    const tx = await koDAO.setSaleActive(active);
+    console.log(tx);
+  });
+
+const accounts = [process.env.KODAO_DEPLOYER || ""];
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -95,7 +103,7 @@ const config: HardhatUserConfig = {
       tags: ["local"],
     },
     hardhat: {
-      accounts,
+      accounts: { mnemonic: process.env.MNEMONIC || "" },
       forking: {
         enabled: process.env.HARDHAT_NETWORK_FORKING === "true",
         url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -130,13 +138,11 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: {
-      default: 0, // here this will by default take the first account as deployer
-      // 1: 0, // similarly on mainnet it will take the first account as deployer. Note though that depending on how hardhat network are configured, the account 0 on one network can be different than on another
+      default: 0,
     },
     team: {
-      default: 1, // here this will by default take the second account as team (so in the test this will be a different account than the deployer)
-      // 1: "", // on the mainnet the team could be a multi sig
-      // 4: "", // on rinkeby
+      default: "",
+      hardhat: 1,
     },
   },
   gasReporter: {
