@@ -150,7 +150,7 @@ const config: HardhatUserConfig = {
       default: 0,
     },
     team: {
-      // FIXME
+      default: "0xA350B6da0F57845f5d2eDAd4C37f693D49dB8d73",
       rinkeby: 0,
       // rinkeny: "0xfDB2eB80Ec340f04F8cbd56d10589f000CBd35D2",
       hardhat: 1,
