@@ -73,7 +73,7 @@ task("setPresaled", "Set presaled list")
     console.log("gas used: ", receipt.gasUsed);
   });
 
-task("setSale", "Set LCA contract sale state")
+task("setSale", "Set contract sale state")
   .addParam("active", "Sale state", false, types.boolean)
   .setAction(async function ({ active }, { ethers, deployments }) {
     const koDAOdep = await deployments.get("KoDAO");
@@ -83,6 +83,15 @@ task("setSale", "Set LCA contract sale state")
     console.log(tx);
   });
 
+task("setURI", "Set URI")
+  .addParam("uri", "uri")
+  .setAction(async function ({ uri }, { ethers, deployments }) {
+    const koDAOdep = await deployments.get("KoDAO");
+    const koDAO = await ethers.getContractAt("KoDAO", koDAOdep.address);
+
+    const tx = await koDAO.setURI(uri);
+    console.log(tx);
+  });
 const accounts = [process.env.KODAO_DEPLOYER || ""];
 
 // You need to export an object to set up your config
