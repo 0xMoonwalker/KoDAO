@@ -41,6 +41,10 @@ contract KoDAO is ERC1155Supply, Ownable {
         saleActive = state;
     }
 
+    function setBeneficiary(address newBeneficiary) public onlyOwner {
+        beneficiary = newBeneficiary;
+    }
+
     function mint(uint256 amount) public payable saleIsActive {
         require(
             totalSupply(tokenID) - totalClaimed + amount < maxSellAmount,

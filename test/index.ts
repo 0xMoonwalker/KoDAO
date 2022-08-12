@@ -255,4 +255,11 @@ describe("KoDAО", function () {
       expect(await koDAO["totalSupply()"]()).to.equals(6);
     });
   });
+
+  describe("#setBeneficiary", function () {
+    it("should be able to set beneficiary", async function () {
+      await koDAO.setBeneficiary(alice.address);
+      expect(await koDAO.beneficiary()).to.be.equal(alice.address);
+    });
+  });
 });
