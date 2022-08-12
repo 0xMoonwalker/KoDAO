@@ -19,7 +19,6 @@ contract KoDAO is ERC1155Supply, Ownable {
     uint256 public constant mintPrice = 0.12 ether;
     uint256 public totalClaimed = 0;
     mapping(address => uint256) public presaled;
-    mapping(address => uint256) public claimed;
     address public beneficiary;
     bool private saleActive = false;
 
